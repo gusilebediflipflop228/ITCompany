@@ -5,9 +5,13 @@ import com.itcompany.itcompany.mapper.DTOMapper;
 import com.itcompany.itcompany.model.Employee;
 import com.itcompany.itcompany.service.EmployeeService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,11 +28,28 @@ public class EmployeeController {
     private final DTOMapper mapper;
 
     @GetMapping
-    @Operation(summary = "Получить всех сотрудников")
-    public ResponseEntity<List<EmployeeDTO>> getAllEmployees() {
-        List<Employee> employees = employeeService.getAllEmployees();
-        List<EmployeeDTO> dtos = mapper.toEmployeeDTOList(employees);
-        return ResponseEntity.ok(dtos);
+    @Operation(summary = "Получить всех сотрудников (с пагинацией)")
+    public ResponseEntity<Page<EmployeeDTO>> getAllEmployees(
+            @PageableDefault(page = 0, size = 10, sort = "lastName") Pageable pageable) {
+
+        Page<Employee> employeesPage = employeeService.getAllEmployees(pageable);
+        Page<EmployeeDTO> dtoPage = employeesPage.map(mapper::toEmployeeDTO);
+
+        return ResponseEntity.ok(dtoPage);
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Поиск сотрудников по имени, фамилии или email")
+    public ResponseEntity<Page<EmployeeDTO>> searchEmployees(
+            @Parameter(description = "Поисковый запрос", required = true, example = "Иванов")
+            @RequestParam String q,
+
+            @PageableDefault(page = 0, size = 10, sort = "lastName") Pageable pageable) {
+
+        Page<Employee> employeesPage = employeeService.searchEmployees(q, pageable);
+        Page<EmployeeDTO> dtoPage = employeesPage.map(mapper::toEmployeeDTO);
+
+        return ResponseEntity.ok(dtoPage);
     }
 
     @GetMapping("/{id}")

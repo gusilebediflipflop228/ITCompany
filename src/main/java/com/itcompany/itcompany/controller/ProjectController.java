@@ -1,19 +1,25 @@
 package com.itcompany.itcompany.controller;
 
 import com.itcompany.itcompany.dto.ProjectDTO;
+import com.itcompany.itcompany.enums.ProjectStatus;
 import com.itcompany.itcompany.mapper.DTOMapper;
 import com.itcompany.itcompany.model.Project;
 import com.itcompany.itcompany.model.ProjectMember;
 import com.itcompany.itcompany.service.ProjectMemberService;
 import com.itcompany.itcompany.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -26,11 +32,54 @@ public class ProjectController {
     private final DTOMapper mapper;
 
     @GetMapping
-    @Operation(summary = "Получить все проекты")
-    public ResponseEntity<List<ProjectDTO>> getAllProjects() {
-        List<Project> projects = projectService.getAllProjects();
-        List<ProjectDTO> dtos = mapper.toProjectDTOList(projects);
-        return ResponseEntity.ok(dtos);
+    @Operation(summary = "Получить все проекты (с пагинацией)")
+    public ResponseEntity<Page<ProjectDTO>> getAllProjects(
+            @PageableDefault(page = 0, size = 10, sort = "name") Pageable pageable) {
+
+        Page<Project> projectsPage = projectService.getAllProjects(pageable);
+        Page<ProjectDTO> dtoPage = projectsPage.map(mapper::toProjectDTO);
+
+        return ResponseEntity.ok(dtoPage);
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Поиск проектов по названию, описанию или стеку")
+    public ResponseEntity<Page<ProjectDTO>> searchProjects(
+            @Parameter(description = "Поисковый запрос", required = true, example = "kotlin")
+            @RequestParam String q,
+
+            @PageableDefault(page = 0, size = 10, sort = "name") Pageable pageable) {
+
+        Page<Project> projectsPage = projectService.searchProjects(q, pageable);
+        Page<ProjectDTO> dtoPage = projectsPage.map(mapper::toProjectDTO);
+
+        return ResponseEntity.ok(dtoPage);
+    }
+
+    @GetMapping("/filter")
+    @Operation(summary = "Фильтрация проектов по статусу, технологии и дедлайну")
+    public ResponseEntity<Page<ProjectDTO>> filterProjects(
+            @Parameter(description = "Статус проекта", example = "ACTIVE")
+            @RequestParam(required = false) ProjectStatus status,
+
+            @Parameter(description = "Технология в стеке", example = "Kotlin")
+            @RequestParam(required = false) String tech,
+
+            @Parameter(description = "Дедлайн раньше этой даты", example = "2026-06-01")
+            @RequestParam(required = false) LocalDate deadlineBefore,
+
+            @PageableDefault(page = 0, size = 10, sort = "name") Pageable pageable) {
+
+        // Если все параметры null — возвращаем все проекты
+        Page<Project> projectsPage;
+        if (status == null && tech == null && deadlineBefore == null) {
+            projectsPage = projectService.getAllProjects(pageable);
+        } else {
+            projectsPage = projectService.filterProjects(status, tech, deadlineBefore, pageable);
+        }
+
+        Page<ProjectDTO> dtoPage = projectsPage.map(mapper::toProjectDTO);
+        return ResponseEntity.ok(dtoPage);
     }
 
     @GetMapping("/{id}")

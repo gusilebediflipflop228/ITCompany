@@ -6,6 +6,8 @@ import com.itcompany.itcompany.model.Employee;
 import com.itcompany.itcompany.repository.EmployeeRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,8 +20,12 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
 
-    public List<Employee> getAllEmployees() {
-        return employeeRepository.findAll();
+    public Page<Employee> getAllEmployees(Pageable pageable) {
+        return employeeRepository.findAll(pageable);
+    }
+
+    public Page<Employee> searchEmployees(String query, Pageable pageable) {
+        return employeeRepository.searchByQuery(query, pageable);
     }
 
     public Employee getEmployeeById(Long id) {
