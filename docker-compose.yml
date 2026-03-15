@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: itcompany-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Подключение к PostgreSQL в Docker-сети
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/project_manager
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      # Flyway миграции
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      # JPA настройки
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      # Профиль по умолчанию
+      SPRING_PROFILES_ACTIVE: default
+    depends_on:
+      db:
+        condition: service_healthy  # Ждём, пока БД будет готова
+    restart: unless-stopped  # Перезапуск при падении
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL 16
+  db:
+    image: postgres:16
+    container_name: itcompany-db
+    environment:
+      POSTGRES_DB: project_manager
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"  # Доступ к БД с хоста
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+        test: [ "CMD-SHELL", "pg_isready -U postgres -d project_manager" ]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+        start_period: 10s
+    restart: unless-stopped
+volumes:
+  postgres_data:

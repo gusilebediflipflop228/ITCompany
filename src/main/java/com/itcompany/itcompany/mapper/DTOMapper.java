@@ -8,23 +8,30 @@ import com.itcompany.itcompany.service.ProjectMemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class DTOMapper {
+
     private final ProjectMemberService projectMemberService;
 
     public ProjectDTO toProjectDTO(Project project) {
-        List<String> teamMemberNames = projectMemberService.getProjectMemberNamesByProjectId(project.getId());
+        List<String> techStackList = project.getTechStack() != null && !project.getTechStack().isBlank()
+                ? Arrays.stream(project.getTechStack().split(",\\s*"))
+                .collect(Collectors.toList())
+                : List.of();
+
+        List<String> teamMemberNames = projectMemberService.getTeamMemberNamesByProjectId(project.getId());
 
         ProjectDTO dto = new ProjectDTO();
         dto.setId(project.getId());
         dto.setName(project.getName());
         dto.setDescription(project.getDescription());
         dto.setStatus(project.getStatus());
-        dto.setTechStack(project.getTechStack());
+        dto.setTechStack(techStackList);
         dto.setStartDate(project.getStartDate());
         dto.setDeadline(project.getDeadline());
         dto.setClientName(project.getClientName());
@@ -32,6 +39,7 @@ public class DTOMapper {
         dto.setClientPhone(project.getClientPhone());
         dto.setLogoUrl(project.getLogoUrl());
         dto.setTeamMemberNames(teamMemberNames);
+
         return dto;
     }
 
